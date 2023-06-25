@@ -38,16 +38,29 @@ RUN apt-get update \
 	fd-find \
 	zsh
 
+# not default in ubuntu and required by everything
 RUN locale-gen en_US.UTF-8
 
+# install ranger and dependencies
 RUN pip install ranger-fm
 RUN pip install pynvim
+
+# install fzf
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && \
 	~/.fzf/install
 
+# setup dotfiles
 RUN zsh -c "$(curl -fsLS get.chezmoi.io)" \
 	-- init \
 	--apply QuestionableAntics
+
+# install aws cli
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+	&& unzip awscliv2.zip \
+	&& ./aws/install
+
+# install poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
 
 ################################################################################
@@ -68,7 +81,6 @@ RUN asdf=$HOME/.asdf/bin/asdf \
 	&& $asdf plugin add golang https://github.com/kennyp/asdf-golang.git \
 	&& $asdf install neovim nightly \
 	&& $asdf install dotnet-core 7.0.304 \
-	# && $asdf install nodejs 20.3.0 \
 	&& $asdf install python 3.9.12 \
 	&& $asdf install lazydocker 0.20.0 \
 	&& $asdf install lazygit latest \
@@ -76,15 +88,20 @@ RUN asdf=$HOME/.asdf/bin/asdf \
 	&& $asdf install golang 1.20.5 \
 	&& $asdf global neovim nightly \
 	&& $asdf global dotnet-core 7.0.304 \
-	# && $asdf global nodejs lts \
 	&& $asdf global python 3.9.12 \
 	&& $asdf global lazydocker 0.20.0 \
 	&& $asdf global lazygit latest \
 	&& $asdf global bat latest \
 	&& $asdf global golang 1.20.5
 
+RUN echo 'alias="asdf/root/.asdf/bin/asdf"' >> $HOME/.zshrc
 RUN echo '\n. $HOME/.asdf/asdf.sh' >> $HOME/.zshrc
 RUN echo '\nexport PATH="$HOME/.asdf/bin:$PATH"' >> $HOME/.zshrc
+
+# This does not work if included above
+# Seems to be due to the install needing asdf to be in a certain location
+RUN zsh -c $HOME/.asdf/bin/asdf install nodejs 20.3.1
+RUN zsh -c $HOME/.asdf/bin/asdf global nodejs 20.3.1
 
 
 ################################################################################
@@ -94,17 +111,11 @@ RUN echo '\nexport PATH="$HOME/.asdf/bin:$PATH"' >> $HOME/.zshrc
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
 # copy pre-oh-my-zsh contents to .zshrc
-RUN cat $HOME/.zshrc.pre-oh-my-zsh >> $HOME/.zshrc
-
-# RUN mv $HOME/.zshrc.pre-oh-my-zsh $HOME/.zshrc
+RUN cat $HOME/.zshrc.pre-oh-my-zsh >> $HOME/.zshrc \
+	&& rm $HOME/.zshrc.pre-oh-my-zsh
 
 # install powerlevel10k
-# RUN git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
-
-# RUN echo 'source ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k/powerlevel10k.zsh-theme' >> ~/.zshrc
-# RUN echo 'source $HOME/.oh-my-zsh/custom/themes/powerlevel10k' >> ~/.zshrc
-# RUN git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/powerlevel10k
-# RUN echo 'source ~/powerlevel10k/powerlevel10k.zsh-theme' >> ~/.zshrc
+RUN git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 
 
 ################################################################################
@@ -125,19 +136,10 @@ RUN /root/.asdf/shims/nvim --headless +q
 # misc
 ################################################################################
 
+# override fd with fdfind
+RUN ln -s $(which fdfind) ~/.local/bin/fd
+RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
+
 # make zsh default shell
 RUN chsh -s $(which zsh)
 CMD [ "zsh" ]
-
-RUN curl -sSL https://install.python-poetry.org | python3 -
-RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
-
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-	&& unzip awscliv2.zip \
-	&& ./aws/install
-
-RUN ln -s $(which fdfind) ~/.local/bin/fd
-# RUN /root/.asdf/bin/asdf plugin add nodejs
-# RUN /root/.asdf/bin/asdf nodejs update-nodebuild
-# RUN /root/.asdf/bin/asdf install nodejs 20.3.0
-# RUN /root/.asdf/bin/asdf global nodejs 20.3.0
