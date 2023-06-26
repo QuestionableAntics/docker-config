@@ -31,6 +31,8 @@ RUN apt-get update \
 	sqlite3 \
 	libsqlite3-dev \
 	lzma \
+	liblzma-dev \
+	libbz2-dev \
 	libffi-dev \
 	libjpeg-dev \
 	zlib1g-dev \
