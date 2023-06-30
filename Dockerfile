@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 from ubuntu:latest
 
+# commit docker container
+# https://docs.docker.com/engine/reference/commandline/commit/
 
 ################################################################################
 # install packages
@@ -44,6 +46,10 @@ RUN apt-get update \
 RUN locale-gen en_US.UTF-8
 
 # install ranger and dependencies
+# Trouble shooting ranger not opening in neovim
+# https://github.com/kevinhwang91/rnvimr/issues/148
+# Trouble shooting ranger not opening most files
+# https://github.com/ranger/ranger/issues/1804
 RUN pip install ranger-fm
 RUN pip install pynvim
 
@@ -59,7 +65,8 @@ RUN zsh -c "$(curl -fsLS get.chezmoi.io)" \
 # install aws cli
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
 	&& unzip awscliv2.zip \
-	&& ./aws/install
+	&& ./aws/install \
+	&& rm -rf awscliv2.zip
 
 # install poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
