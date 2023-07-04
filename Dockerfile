@@ -50,8 +50,7 @@ RUN locale-gen en_US.UTF-8
 # https://github.com/kevinhwang91/rnvimr/issues/148
 # Trouble shooting ranger not opening most files
 # https://github.com/ranger/ranger/issues/1804
-RUN pip install ranger-fm
-RUN pip install pynvim
+RUN pip install ranger-fm pynvim
 
 # install fzf
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && \
@@ -77,9 +76,8 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 ################################################################################
 
 # install asdf
-RUN git clone https://github.com/asdf-vm/asdf.git $HOME/.asdf
-
-RUN asdf=$HOME/.asdf/bin/asdf \
+RUN git clone https://github.com/asdf-vm/asdf.git $HOME/.asdf \
+	&& asdf=$HOME/.asdf/bin/asdf \
 	&& $asdf plugin add neovim \
 	&& $asdf plugin add dotnet-core https://github.com/emersonsoares/asdf-dotnet-core.git \
 	&& $asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git \
@@ -103,21 +101,22 @@ RUN asdf=$HOME/.asdf/bin/asdf \
 	&& $asdf global bat latest \
 	&& $asdf global golang 1.20.5
 
-RUN echo 'alias="asdf/root/.asdf/bin/asdf"' >> $HOME/.zshrc
-RUN echo '\n. $HOME/.asdf/asdf.sh' >> $HOME/.zshrc
-RUN echo '\nexport PATH="$HOME/.asdf/bin:$PATH"' >> $HOME/.zshrc
+RUN echo '\nalias="asdf/root/.asdf/bin/asdf"' >> $HOME/.zshrc && \
+	echo '\n. $HOME/.asdf/asdf.sh' >> $HOME/.zshrc && \
+	echo '\nexport PATH="$HOME/.asdf/bin:$PATH"' >> $HOME/.zshrc && \
+	echo '\nexport PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
 
 # This does not work if included above
 # Seems to be due to the install needing asdf to be in a certain location
-RUN zsh -c $HOME/.asdf/bin/asdf install nodejs 20.3.1
-RUN zsh -c $HOME/.asdf/bin/asdf global nodejs 20.3.1
+RUN $HOME/.asdf/bin/asdf install nodejs 20.3.1
+RUN $HOME/.asdf/bin/asdf global nodejs 20.3.1
 
 
 ################################################################################
 # oh my zsh setup
 ################################################################################
 
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+RUN zsh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
 # copy pre-oh-my-zsh contents to .zshrc
 RUN cat $HOME/.zshrc.pre-oh-my-zsh >> $HOME/.zshrc \
@@ -138,7 +137,7 @@ RUN /root/.asdf/shims/nvim --headless "Lazy sync" +"sleep 30" +q
 RUN /root/.asdf/shims/nvim --headless "COQDeps" +"sleep 30" +q
 
 # Second time is to install treesitter parsers
-RUN /root/.asdf/shims/nvim --headless +q
+RUN /root/.asdf/shims/nvim --headless +"sleep 30" +q
 
 
 ################################################################################
@@ -147,7 +146,6 @@ RUN /root/.asdf/shims/nvim --headless +q
 
 # override fd with fdfind
 RUN ln -s $(which fdfind) ~/.local/bin/fd
-RUN echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
 
 # make zsh default shell
 RUN chsh -s $(which zsh)
