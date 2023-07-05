@@ -45,6 +45,14 @@ RUN apt-get update \
 # not default in ubuntu and required by everything
 RUN locale-gen en_US.UTF-8
 
+# override fd with fdfind
+RUN ln -s $(which fdfind) ~/.local/bin/fd
+
+# make zsh default shell
+RUN chsh -s $(which zsh)
+CMD [ "zsh" ]
+SHELL ["/bin/zsh", "-c"]
+
 # install ranger and dependencies
 # Trouble shooting ranger not opening in neovim
 # https://github.com/kevinhwang91/rnvimr/issues/148
@@ -101,15 +109,9 @@ RUN git clone https://github.com/asdf-vm/asdf.git $HOME/.asdf \
 	&& $asdf global bat latest \
 	&& $asdf global golang 1.20.5
 
-RUN echo '\nalias="asdf/root/.asdf/bin/asdf"' >> $HOME/.zshrc && \
-	echo '\n. $HOME/.asdf/asdf.sh' >> $HOME/.zshrc && \
+RUN echo '\n. $HOME/.asdf/asdf.sh' >> $HOME/.zshrc && \
 	echo '\nexport PATH="$HOME/.asdf/bin:$PATH"' >> $HOME/.zshrc && \
 	echo '\nexport PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
-
-# This does not work if included above
-# Seems to be due to the install needing asdf to be in a certain location
-RUN $HOME/.asdf/bin/asdf install nodejs 20.3.1
-RUN $HOME/.asdf/bin/asdf global nodejs 20.3.1
 
 
 ################################################################################
@@ -123,7 +125,20 @@ RUN cat $HOME/.zshrc.pre-oh-my-zsh >> $HOME/.zshrc \
 	&& rm $HOME/.zshrc.pre-oh-my-zsh
 
 # install powerlevel10k
-RUN git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+RUN git clone --depth=1 \
+	https://github.com/romkatv/powerlevel10k.git \
+	${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+
+
+################################################################################
+# nodejs setup
+################################################################################
+
+# This does not work if included above
+# Seems to be due to the install needing asdf to be in a certain location
+RUN source $HOME/.zshrc \
+	&& asdf install nodejs 20.3.1 \
+	&& asdf global nodejs 20.3.1
 
 
 ################################################################################
@@ -131,22 +146,8 @@ RUN git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTO
 ################################################################################
 
 # First time is to install plugins
-RUN /root/.asdf/shims/nvim --headless "Lazy sync" +"sleep 30" +q
-
-# Install Coq dependencies
-RUN /root/.asdf/shims/nvim --headless "COQDeps" +"sleep 30" +q
-
-# Second time is to install treesitter parsers
-RUN /root/.asdf/shims/nvim --headless +"sleep 30" +q
-
-
-################################################################################
-# misc
-################################################################################
-
-# override fd with fdfind
-RUN ln -s $(which fdfind) ~/.local/bin/fd
-
-# make zsh default shell
-RUN chsh -s $(which zsh)
-CMD [ "zsh" ]
+RUN /root/.asdf/shims/nvim --headless "Lazy sync" +"sleep 30" +q \
+	# Install Coq dependencies
+	&& /root/.asdf/shims/nvim --headless "COQDeps" +"sleep 30" +q \
+	# Second time is to install treesitter parsers
+	&& /root/.asdf/shims/nvim --headless +"sleep 30" +q
