@@ -42,32 +42,32 @@ RUN apt-get update \
 	fd-find \
 	zsh
 
-# not default in ubuntu and required by everything
-RUN locale-gen en_US.UTF-8
-
-# override fd with fdfind
-RUN ln -s $(which fdfind) ~/.local/bin/fd
-
 # make zsh default shell
 RUN chsh -s $(which zsh)
 CMD [ "zsh" ]
 SHELL ["/bin/zsh", "-c"]
 
-# install ranger and dependencies
-# Trouble shooting ranger not opening in neovim
-# https://github.com/kevinhwang91/rnvimr/issues/148
-# Trouble shooting ranger not opening most files
-# https://github.com/ranger/ranger/issues/1804
-RUN pip install ranger-fm pynvim
+# install rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+
+# not default in ubuntu and required by everything
+RUN locale-gen en_US.UTF-8
+
+# RUN ln -s $(which fdfind) $HOME/.local/bin/fd
+
+RUN pip install pynvim pgcli
 
 # install fzf
-RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && \
-	~/.fzf/install
+RUN git clone --depth 1 https://github.com/junegunn/fzf.git $HOME/.fzf \
+	&& $HOME/.fzf/install
 
 # setup dotfiles
 RUN zsh -c "$(curl -fsLS get.chezmoi.io)" \
 	-- init \
 	--apply QuestionableAntics
+
+# override fd with fdfind
+RUN echo 'alias fd=fdfind' >> $HOME/.zshrc
 
 # install aws cli
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
@@ -84,34 +84,36 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 ################################################################################
 
 # install asdf
-RUN git clone https://github.com/asdf-vm/asdf.git $HOME/.asdf \
-	&& asdf=$HOME/.asdf/bin/asdf \
-	&& $asdf plugin add neovim \
-	&& $asdf plugin add dotnet-core https://github.com/emersonsoares/asdf-dotnet-core.git \
-	&& $asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git \
-	&& $asdf plugin add python \
-	&& $asdf plugin add lazydocker https://github.com/comdotlinux/asdf-lazydocker.git \
-	&& $asdf plugin add lazygit https://github.com/nklmilojevic/asdf-lazygit.git \
-	&& $asdf plugin add bat \
-	&& $asdf plugin add golang https://github.com/kennyp/asdf-golang.git \
-	&& $asdf install neovim nightly \
-	&& $asdf install dotnet-core 7.0.304 \
-	&& $asdf install python 3.9.12 \
-	&& $asdf install lazydocker 0.20.0 \
-	&& $asdf install lazygit latest \
-	&& $asdf install bat latest \
-	&& $asdf install golang 1.20.5 \
-	&& $asdf global neovim nightly \
-	&& $asdf global dotnet-core 7.0.304 \
-	&& $asdf global python 3.9.12 \
-	&& $asdf global lazydocker 0.20.0 \
-	&& $asdf global lazygit latest \
-	&& $asdf global bat latest \
-	&& $asdf global golang 1.20.5
+RUN git clone https://github.com/asdf-vm/asdf.git $HOME/.asdf
+RUN source $HOME/.zshrc \
+	&& asdf plugin add neovim \
+	&& asdf plugin add dotnet-core https://github.com/emersonsoares/asdf-dotnet-core.git \
+	&& asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git \
+	&& asdf plugin add python \
+	&& asdf plugin add lazydocker https://github.com/comdotlinux/asdf-lazydocker.git \
+	&& asdf plugin add lazygit https://github.com/nklmilojevic/asdf-lazygit.git \
+	&& asdf plugin add bat \
+	&& asdf plugin add golang https://github.com/kennyp/asdf-golang.git \
+	&& asdf install neovim nightly \
+	&& asdf install dotnet-core 7.0.304 \
+	&& asdf install nodejs 20.3.1 \
+	&& asdf install python 3.9.12 \
+	&& asdf install lazydocker 0.20.0 \
+	&& asdf install lazygit latest \
+	&& asdf install bat latest \
+	&& asdf install golang 1.20.5 \
+	&& asdf global neovim nightly \
+	&& asdf global dotnet-core 7.0.304 \
+	&& asdf global nodejs 20.3.1 \
+	&& asdf global python 3.9.12 \
+	&& asdf global lazydocker 0.20.0 \
+	&& asdf global lazygit latest \
+	&& asdf global bat latest \
+	&& asdf global golang 1.20.5
 
-RUN echo '\n. $HOME/.asdf/asdf.sh' >> $HOME/.zshrc && \
-	echo '\nexport PATH="$HOME/.asdf/bin:$PATH"' >> $HOME/.zshrc && \
-	echo '\nexport PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
+RUN echo '\n. $HOME/.asdf/asdf.sh' >> $HOME/.zshrc \
+	&& echo '\nexport PATH="$HOME/.asdf/bin:$PATH"' >> $HOME/.zshrc \
+	&& echo '\nexport PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
 
 
 ################################################################################
@@ -131,23 +133,24 @@ RUN git clone --depth=1 \
 
 
 ################################################################################
-# nodejs setup
-################################################################################
-
-# This does not work if included above
-# Seems to be due to the install needing asdf to be in a certain location
-RUN source $HOME/.zshrc \
-	&& asdf install nodejs 20.3.1 \
-	&& asdf global nodejs 20.3.1
-
-
-################################################################################
 # neovim setup
 ################################################################################
 
 # First time is to install plugins
-RUN /root/.asdf/shims/nvim --headless "Lazy sync" +"sleep 30" +q \
+RUN source $HOME/.zshrc \
+	&& nvim --headless "Lazy sync" +"sleep 30" +q \
 	# Install Coq dependencies
-	&& /root/.asdf/shims/nvim --headless "COQDeps" +"sleep 30" +q \
+	&& nvim --headless "COQDeps" +"sleep 30" +q \
 	# Second time is to install treesitter parsers
-	&& /root/.asdf/shims/nvim --headless +"sleep 30" +q
+	&& nvim --headless +"sleep 30" +q
+
+
+################################################################################
+# misc setup
+################################################################################
+
+# Install lf terminal file manager
+RUN source $HOME/.zshrc && env CGO_ENABLED=0 go install -ldflags="-s -w" github.com/gokcehan/lf@latest
+
+RUN source $HOME/.zshrc \
+	&& echo '\nexport PATH="$(go env GOPATH)/bin:$PATH"' >> $HOME/.zshrc \
