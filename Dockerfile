@@ -4,11 +4,12 @@ from ubuntu:latest
 # commit docker container
 # https://docs.docker.com/engine/reference/commandline/commit/
 
+
 ################################################################################
 # install packages
 ################################################################################
 
-RUN apt-get update \
+RUN apt-get update -y \
 	&& apt-get install -y \
 	apt-utils \
 	build-essential \
@@ -53,9 +54,9 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 # not default in ubuntu and required by everything
 RUN locale-gen en_US.UTF-8
 
-# RUN ln -s $(which fdfind) $HOME/.local/bin/fd
-
-RUN pip install pynvim pgcli
+RUN pip install \
+	pynvim \
+	pgcli
 
 # install fzf
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git $HOME/.fzf \
@@ -80,40 +81,37 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 
 
 ################################################################################
-# asdf setup
+# rtx setup
 ################################################################################
 
-# install asdf
-RUN git clone https://github.com/asdf-vm/asdf.git $HOME/.asdf
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+RUN cargo binstall rtx-cli -y
 RUN source $HOME/.zshrc \
-	&& asdf plugin add neovim \
-	&& asdf plugin add dotnet-core https://github.com/emersonsoares/asdf-dotnet-core.git \
-	&& asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git \
-	&& asdf plugin add python \
-	&& asdf plugin add lazydocker https://github.com/comdotlinux/asdf-lazydocker.git \
-	&& asdf plugin add lazygit https://github.com/nklmilojevic/asdf-lazygit.git \
-	&& asdf plugin add bat \
-	&& asdf plugin add golang https://github.com/kennyp/asdf-golang.git \
-	&& asdf install neovim nightly \
-	&& asdf install dotnet-core 7.0.304 \
-	&& asdf install nodejs 20.3.1 \
-	&& asdf install python 3.9.12 \
-	&& asdf install lazydocker 0.20.0 \
-	&& asdf install lazygit latest \
-	&& asdf install bat latest \
-	&& asdf install golang 1.20.5 \
-	&& asdf global neovim nightly \
-	&& asdf global dotnet-core 7.0.304 \
-	&& asdf global nodejs 20.3.1 \
-	&& asdf global python 3.9.12 \
-	&& asdf global lazydocker 0.20.0 \
-	&& asdf global lazygit latest \
-	&& asdf global bat latest \
-	&& asdf global golang 1.20.5
+	&& rtx plugin add neovim \
+	&& rtx plugin add dotnet-core https://github.com/emersonsoares/asdf-dotnet-core.git \
+	&& rtx plugin add lazydocker https://github.com/comdotlinux/asdf-lazydocker.git \
+	&& rtx plugin add lazygit https://github.com/nklmilojevic/asdf-lazygit.git \
+	&& rtx plugin add bat \
+	&& rtx plugin add golang https://github.com/kennyp/asdf-golang.git \
+	&& rtx use -g neovim@nightly \
+	&& rtx use -g dotnet-core@7.0.304 \
+	&& rtx use -g nodejs@20.3.1 \
+	&& rtx use -g python@3.9.12 \
+	&& rtx use -g lazydocker@latest \
+	&& rtx use -g lazygit@latest \
+	&& rtx use -g bat@latest \
+	&& rtx use -g golang@latest
 
-RUN echo '\n. $HOME/.asdf/asdf.sh' >> $HOME/.zshrc \
-	&& echo '\nexport PATH="$HOME/.asdf/bin:$PATH"' >> $HOME/.zshrc \
-	&& echo '\nexport PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
+
+################################################################################
+# neovim setup
+################################################################################
+
+RUN nvim=/root/.local/share/rtx/installs/neovim/nightly/bin/nvim \
+# source $HOME/.zshrc \
+	&& $nvim --headless "Lazy sync" +"sleep 30" +q \
+	# Install Coq dependencies
+	&& $nvim --headless "COQDeps" +"sleep 30" +q
 
 
 ################################################################################
@@ -123,8 +121,9 @@ RUN echo '\n. $HOME/.asdf/asdf.sh' >> $HOME/.zshrc \
 RUN zsh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
 # copy pre-oh-my-zsh contents to .zshrc
-RUN cat $HOME/.zshrc.pre-oh-my-zsh >> $HOME/.zshrc \
-	&& rm $HOME/.zshrc.pre-oh-my-zsh
+# delete .zshrc and replace with pre-oh-my-zsh contents
+RUN rm $HOME/.zshrc \
+	&& mv $HOME/.zshrc.pre-oh-my-zsh $HOME/.zshrc 
 
 # install powerlevel10k
 RUN git clone --depth=1 \
@@ -133,24 +132,30 @@ RUN git clone --depth=1 \
 
 
 ################################################################################
-# neovim setup
-################################################################################
-
-# First time is to install plugins
-RUN source $HOME/.zshrc \
-	&& nvim --headless "Lazy sync" +"sleep 30" +q \
-	# Install Coq dependencies
-	&& nvim --headless "COQDeps" +"sleep 30" +q \
-	# Second time is to install treesitter parsers
-	&& nvim --headless +"sleep 30" +q
-
-
-################################################################################
 # misc setup
 ################################################################################
 
 # Install lf terminal file manager
-RUN source $HOME/.zshrc && env CGO_ENABLED=0 go install -ldflags="-s -w" github.com/gokcehan/lf@latest
+RUN env CGO_ENABLED=0 $HOME/.local/share/rtx/installs/go/latest/go/bin/go install -ldflags="-s -w" github.com/gokcehan/lf@latest
 
-RUN source $HOME/.zshrc \
-	&& echo '\nexport PATH="$(go env GOPATH)/bin:$PATH"' >> $HOME/.zshrc \
+# RUN echo "export PATH=$HOME/.local/share/rtx/installs/go/1.20.5/packages/bin:$PATH" >> $HOME/.zshrc
+
+# RUN source $HOME/.zshrc \
+# 	&& go=$HOME/.local/share/rtx/installs/go/1.20.5/go/bin/go
+# 	# && echo '\nexport PATH="$($go env GOPATH)/bin:$PATH"' >> $HOME/.zshrc
+
+
+################################################################################
+# potential packages (terminal and gui)
+################################################################################
+
+RUN git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+
+# RUN go install github.com/asciimoo/wuzz@latest
+# RUN go install github.com/charmbracelet/bubbletea@latest
+# RUN go install github.com/charmbracelet/glow@latest
+# RUN cargo binstall projectable -y
+# RUN cargo binstall bottom -y
+# RUN cargo binstall ast-grep -y
+# Something to handle bitwarden
+# Task switcher
