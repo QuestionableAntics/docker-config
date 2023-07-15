@@ -13,34 +13,33 @@ RUN apt-get update -y \
 	&& apt-get install -y \
 	apt-utils \
 	build-essential \
+	bzip2 \
 	cmake \
 	curl \
 	git \
     gzip \
+	libbz2-dev \
+	libncurses5-dev \
+	libncursesw5-dev \
+	libffi-dev \
+	libjpeg-dev \
+	liblzma-dev \
+	libreadline8 \
+	libreadline-dev \
+	libsqlite3-dev \
+	libssl-dev \
+	locales \
+	lzma \
     nginx \
-    npm \
+	openssl \
 	pkg-config \
-	ripgrep \
+	python3-pip \
+	sqlite3 \
     supervisor \
 	unzip \
 	wget \
 	yasm \
-	python3-pip \
-	bzip2 \
-	libncurses5-dev \
-	libncursesw5-dev \
-	libreadline8 \
-	libreadline-dev \
-	sqlite3 \
-	libsqlite3-dev \
-	lzma \
-	liblzma-dev \
-	libbz2-dev \
-	libffi-dev \
-	libjpeg-dev \
 	zlib1g-dev \
-	locales \
-	fd-find \
 	zsh
 
 # make zsh default shell
@@ -54,30 +53,12 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 # not default in ubuntu and required by everything
 RUN locale-gen en_US.UTF-8
 
-RUN pip install \
-	pynvim \
-	pgcli
-
-# install fzf
-RUN git clone --depth 1 https://github.com/junegunn/fzf.git $HOME/.fzf \
-	&& $HOME/.fzf/install
+RUN pip install pynvim
 
 # setup dotfiles
 RUN zsh -c "$(curl -fsLS get.chezmoi.io)" \
 	-- init \
 	--apply QuestionableAntics
-
-# override fd with fdfind
-RUN echo 'alias fd=fdfind' >> $HOME/.zshrc
-
-# install aws cli
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-	&& unzip awscliv2.zip \
-	&& ./aws/install \
-	&& rm -rf awscliv2.zip
-
-# install poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
 
 
 ################################################################################
@@ -100,35 +81,39 @@ RUN source $HOME/.zshrc \
 	&& rtx use -g lazydocker@latest \
 	&& rtx use -g lazygit@latest \
 	&& rtx use -g bat@latest \
-	&& rtx use -g golang@latest
+	&& rtx use -g golang@latest \
+	&& rtx use -g ripgrep@latest \
+	&& rtx use -g fzf@latest \
+	&& rtx use -g fd@latest \
+	&& rtx use -g poetry@latest \
+	&& rtx use -g awscli@latest \
+	&& rtx use -g lua@latest
 
 
 ################################################################################
 # neovim setup
 ################################################################################
 
-RUN nvim=/root/.local/share/rtx/installs/neovim/nightly/bin/nvim \
-# source $HOME/.zshrc \
-	&& $nvim --headless "Lazy sync" +"sleep 30" +q \
-	# Install Coq dependencies
-	&& $nvim --headless "COQDeps" +"sleep 30" +q
+RUN eval "$(rtx env -s zsh)" \
+	&& nvim --headless "Lazy sync" +"sleep 20" +q
 
 
 ################################################################################
 # oh my zsh setup
 ################################################################################
 
-RUN zsh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-
-# copy pre-oh-my-zsh contents to .zshrc
-# delete .zshrc and replace with pre-oh-my-zsh contents
-RUN rm $HOME/.zshrc \
-	&& mv $HOME/.zshrc.pre-oh-my-zsh $HOME/.zshrc 
-
-# install powerlevel10k
-RUN git clone --depth=1 \
-	https://github.com/romkatv/powerlevel10k.git \
-	${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+RUN zsh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+	&& git clone --depth=1 \
+		https://github.com/zsh-users/zsh-syntax-highlighting.git \
+		$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting \
+	# copy pre-oh-my-zsh contents to .zshrc
+	# delete .zshrc and replace with pre-oh-my-zsh contents
+	&& rm $HOME/.zshrc \
+	&& mv $HOME/.zshrc.pre-oh-my-zsh $HOME/.zshrc \
+	# install powerlevel10k
+	&& git clone --depth=1 \
+		https://github.com/romkatv/powerlevel10k.git \
+		${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 
 
 ################################################################################
@@ -136,7 +121,11 @@ RUN git clone --depth=1 \
 ################################################################################
 
 # Install lf terminal file manager
-RUN env CGO_ENABLED=0 $HOME/.local/share/rtx/installs/go/latest/go/bin/go install -ldflags="-s -w" github.com/gokcehan/lf@latest
+RUN eval "$(rtx env -s zsh)" \
+	&& env CGO_ENABLED=0 go install -ldflags="-s -w" github.com/gokcehan/lf@latest
+# RUN eval "$(rtx env -s zsh)" && env CGO_ENABLED=0 $HOME/.local/share/rtx/installs/go/latest/go/bin/go install -ldflags="-s -w" github.com/gokcehan/lf@latest
+# RUN zsh -c env CGO_ENABLED=0 $HOME/.local/share/rtx/installs/go/latest/go/bin/go install -ldflags="-s -w" github.com/gokcehan/lf@latest
+# RUN source $HOME/.zshrc && rtx use -g go@latest && which go
 
 # RUN echo "export PATH=$HOME/.local/share/rtx/installs/go/1.20.5/packages/bin:$PATH" >> $HOME/.zshrc
 
@@ -144,14 +133,21 @@ RUN env CGO_ENABLED=0 $HOME/.local/share/rtx/installs/go/latest/go/bin/go instal
 # 	&& go=$HOME/.local/share/rtx/installs/go/1.20.5/go/bin/go
 # 	# && echo '\nexport PATH="$($go env GOPATH)/bin:$PATH"' >> $HOME/.zshrc
 
+# https://stackoverflow.com/questions/72978485/git-submodule-update-failed-with-fatal-detected-dubious-ownership-in-repositor
+RUN git config --global --add safe.directory '*'
+
+# https://stackoverflow.com/questions/27701930/how-to-add-users-to-docker-container
+# RUN useradd --create-home --shell /bin/zsh ubuntu
+# RUN usermod -aG sudo ubuntu
+# RUN echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+# RUN echo 'ubuntu:ubuntu' | chpasswd
+# USER ubuntu
+# WORKDIR /home/ubuntu
 
 ################################################################################
 # potential packages (terminal and gui)
 ################################################################################
 
-RUN git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
-
-# RUN go install github.com/asciimoo/wuzz@latest
 # RUN go install github.com/charmbracelet/bubbletea@latest
 # RUN go install github.com/charmbracelet/glow@latest
 # RUN cargo binstall projectable -y
@@ -159,3 +155,5 @@ RUN git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $HOME/.oh
 # RUN cargo binstall ast-grep -y
 # Something to handle bitwarden
 # Task switcher
+	# Raycast for mac
+	# hopefully they update to support linux
