@@ -1,9 +1,6 @@
 # syntax=docker/dockerfile:1
 from ubuntu:latest
 
-# commit docker container
-# https://docs.docker.com/engine/reference/commandline/commit/
-
 
 ################################################################################
 # install packages
@@ -53,7 +50,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 # not default in ubuntu and required by everything
 RUN locale-gen en_US.UTF-8
 
-RUN pip install pynvim
+RUN pip install pynvim aider-chat
 
 # setup dotfiles
 RUN zsh -c "$(curl -fsLS get.chezmoi.io)" \
@@ -87,7 +84,9 @@ RUN source $HOME/.zshrc \
 	&& rtx use -g fd@latest \
 	&& rtx use -g poetry@latest \
 	&& rtx use -g awscli@latest \
-	&& rtx use -g lua@latest
+	&& rtx use -g lua@latest \
+	&& rtx use -g delta@latest
+
 
 
 ################################################################################
@@ -95,7 +94,8 @@ RUN source $HOME/.zshrc \
 ################################################################################
 
 RUN eval "$(rtx env -s zsh)" \
-	&& nvim --headless "Lazy sync" +"sleep 20" +q
+	# && nvim --headless "Lazy sync" +"sleep 20" +q
+	&& nvim --headless "Lazy! sync" +qa
 
 
 ################################################################################
@@ -123,18 +123,15 @@ RUN zsh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/maste
 # Install lf terminal file manager
 RUN eval "$(rtx env -s zsh)" \
 	&& env CGO_ENABLED=0 go install -ldflags="-s -w" github.com/gokcehan/lf@latest
-# RUN eval "$(rtx env -s zsh)" && env CGO_ENABLED=0 $HOME/.local/share/rtx/installs/go/latest/go/bin/go install -ldflags="-s -w" github.com/gokcehan/lf@latest
-# RUN zsh -c env CGO_ENABLED=0 $HOME/.local/share/rtx/installs/go/latest/go/bin/go install -ldflags="-s -w" github.com/gokcehan/lf@latest
-# RUN source $HOME/.zshrc && rtx use -g go@latest && which go
 
-# RUN echo "export PATH=$HOME/.local/share/rtx/installs/go/1.20.5/packages/bin:$PATH" >> $HOME/.zshrc
+RUN eval "$(rtx env -s zsh)" \
+	&& npm install -g gitid
 
-# RUN source $HOME/.zshrc \
-# 	&& go=$HOME/.local/share/rtx/installs/go/1.20.5/go/bin/go
-# 	# && echo '\nexport PATH="$($go env GOPATH)/bin:$PATH"' >> $HOME/.zshrc
+# Set shell to zsh (not respected in neovim otherwise)
+RUN echo "export SHELL=$(which zsh)" >> $HOME/.zshrc
 
-# https://stackoverflow.com/questions/72978485/git-submodule-update-failed-with-fatal-detected-dubious-ownership-in-repositor
-RUN git config --global --add safe.directory '*'
+# # https://stackoverflow.com/questions/72978485/git-submodule-update-failed-with-fatal-detected-dubious-ownership-in-repositor
+# RUN git config --global --add safe.directory '*'
 
 # https://stackoverflow.com/questions/27701930/how-to-add-users-to-docker-container
 # RUN useradd --create-home --shell /bin/zsh ubuntu
@@ -143,6 +140,7 @@ RUN git config --global --add safe.directory '*'
 # RUN echo 'ubuntu:ubuntu' | chpasswd
 # USER ubuntu
 # WORKDIR /home/ubuntu
+
 
 ################################################################################
 # potential packages (terminal and gui)
@@ -157,3 +155,4 @@ RUN git config --global --add safe.directory '*'
 # Task switcher
 	# Raycast for mac
 	# hopefully they update to support linux
+# cargo install --git https://github.com/sxyazi/yazi.git
