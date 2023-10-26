@@ -156,3 +156,4 @@ RUN echo "export SHELL=$(which zsh)" >> $HOME/.zshrc
 	# Raycast for mac
 	# hopefully they update to support linux
 # cargo install --git https://github.com/sxyazi/yazi.git
+# go install github.com/antonmedv/fx@latest
