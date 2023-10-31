@@ -85,8 +85,8 @@ RUN source $HOME/.zshrc \
 	&& rtx use -g poetry@latest \
 	&& rtx use -g awscli@latest \
 	&& rtx use -g lua@latest \
-	&& rtx use -g delta@latest
-
+	&& rtx use -g delta@latest \
+	&& rtx use zoxide@latest
 
 
 ################################################################################
@@ -157,3 +157,6 @@ RUN echo "export SHELL=$(which zsh)" >> $HOME/.zshrc
 	# hopefully they update to support linux
 # cargo install --git https://github.com/sxyazi/yazi.git
 # go install github.com/antonmedv/fx@latest
+# cargo binstall atuin
+# nushell
+# starship
